@@ -71,7 +71,8 @@ class GenerateDaily():
 		dailiesString = '"%s"' % '", "'.join(dailies_profiles.keys())
 		parser.add_argument("-p", "--profile", help="Dailies overlay profiles defined in dailie-config.yaml: %s. Default is \"%s\"" % (dailiesString, DEFAULT_DAILIES_PROFILE))
 		parser.add_argument("-o", "--output", help="Output directory: Optional override to movie_location in the DAILIES_CONFIG. This can be a path relative to the image sequence.")
-		parser.add_argument("-t", '--text', help="Text elements and contents to add: e.g. \n\t\"artist: Jed Smith | comment: this is stupid man|")
+		parser.add_argument("-ot", '--overlayText', help="Text elements and contents to add: e.g. \n\t\"artist: Jed Smith | comment: this is stupid man|")
+		parser.add_argument("-st", '--slateText', help="Text elements and contents to add: e.g. \n\t\"artist: Jed Smith | comment: this is stupid man|")
 		ocioString = '"%s"' % '", "'.join(ocio_profiles.keys())
 		parser.add_argument("--ocio", help="OCIO color space presets defined in dailie-config.yaml: %s" % (ocioString))
 		parser.add_argument("-d", "--debug", help="Set debug to true.", action="store_true")
@@ -108,30 +109,19 @@ class GenerateDaily():
 
 		#
 		self.outputOCIOProfile = args.ocio
+
 		#
 		DEBUG = args.debug
 
 		#
-		texts = args.text
-		if texts:
-			texts = texts.split('|')
-		else:
-			texts = []
-		#
-		self.text = {}
-		for text in texts:
-			key, value = text.split(':')
-			key = key.strip()
-			value = value.strip()
-			self.text[key] = value
-		if self.profile_config.get('text_elements'):
-			datetime_format_string = self.profile_config.get('text_elements').get('datetime').get('datetime_format')
-		else:
-			datetime_format_string = None
-		if datetime_format_string:
-			self.text["datetime"] = datetime.datetime.now().strftime(datetime_format_string)
-		else:
-			self.text['datetime'] = datetime.datetime.now().replace(microsecond=0).isoformat()
+		self.overlayTextDict = {}
+		for t in args.overlayText.split(':'):
+			tmp=t.strip().split('=')
+			if len(tmp)==2:
+				self.overlayTextDict[tmp[0]]=tmp[1]
+			else:
+				self.overlayTextDict[tmp[0]] = True
+		self.overlayTextDict['date'] = datetime.datetime.now().strftime("%Y/%m/%d")
 
 
 		# Gather image sequences from input path
@@ -140,6 +130,8 @@ class GenerateDaily():
 			print("No image sequence found! Exiting...")
 			self.setup_success = False
 			return
+		if 'sequence' in self.overlayTextDict.keys():
+			self.overlayTextDict['sequence'] = self.image_sequences[0].path()
 
 
 		# -----------------------------------
@@ -216,9 +208,6 @@ class GenerateDaily():
 				self.process()
 
 
-
-
-
 	def process(self):
 		"""
 		Performs the actual processing of the movie.
@@ -280,7 +269,8 @@ class GenerateDaily():
 			except OSError:
 				print("Output directory does not exist and do not have permission to create it: \n\t{0}".format(os.path.dirname(self.outputMovieFile)))
 				return
-#seq.format('%h%R%t')
+		
+		# Echo settings
 		print("Input sequence: \t%s" % self.image_sequence.path())
 		print("Dailies profile: \t%s" % self.profile_config['name'])
 		print("Codec config: \t\t%s" % self.codec_config['name'])
@@ -289,7 +279,11 @@ class GenerateDaily():
 		print("Output width: \t\t%s" % self.output_width)
 		print("Output height: \t\t%s" % self.output_height)
 		print("Output movie: \t\t%s" % self.outputMovieFile)
+		print("Text:")
+		for k,v in self.overlayTextDict.items():
+			print("\t%s: %s" % (k,v))
 		print("")
+
 
 		# Set up Logger
 		log_fullpath = os.path.splitext(self.outputMovieFile)[0] + ".log"
@@ -326,7 +320,7 @@ class GenerateDaily():
 		# Set up ffmpeg command
 		ffmpeg_args = self.setup_ffmpeg()
 
-		log.info("\n%s\n\n" % (ffmpeg_args))
+		log.info("\n\n%s\n\n" % (ffmpeg_args))
 		
 		print("Running command:\n%s\n"% ffmpeg_args)
 
@@ -334,10 +328,13 @@ class GenerateDaily():
 		self.static_text_buf = oiio.ImageBuf(oiio.ImageSpec(self.output_width, self.output_height, 4, self.pixel_data_type))
 
 		# Loop through each text element, create the text image, and add it to self.static_text_buf
+		log.debug("\t-- processing static text")
 		text_elements = self.profile_config.get('text_elements')
 		if text_elements:
 			for text_element_name, text_element in text_elements.items():
-				self.generate_text(text_element_name, text_element, self.static_text_buf)
+				if text_element_name != 'framecounter':
+					print("generating static overlay frame with %s\n\t%s\n" % (text_element_name, text_element))
+					self.generate_text(text_element_name, text_element, self.static_text_buf)
 
 
 		if not DEBUG:
@@ -350,8 +347,7 @@ class GenerateDaily():
 
 		# Loop through every frame, passing the result to the ffmpeg subprocess
 		for i, self.frame in enumerate(self.image_sequence, 1):
-
-			log.info("Processing frame {0:04d}: \t{1:04d} of {2:04d}".format(self.frame.frame, i, self.image_sequence.length()))
+			log.info("\n\nProcessing %s, %s of %s" % (self.frame, i, self.image_sequence.length()))
 			# elapsed_time = datetime.timedelta(seconds = time.time() - start_time)
 			# log.info("Time Elapsed: \t{0}".format(elapsed_time))
 			frame_start_time = time.time()
@@ -359,9 +355,10 @@ class GenerateDaily():
 			buf = self.process_frame(self.frame)
 
 			# Set framecounter in text elements, add framecounter text
-			if self.text:
-				if self.text.get('framecounter'):
-					self.text['framecounter'] = str(self.frame.frame).zfill(text_elements.get('framecounter').get('padding'))
+			if self.overlayTextDict:
+				if self.overlayTextDict.get('framecounter'):
+					self.overlayTextDict['framecounter'] = ("%s %s" % ("", str(self.frame.frame).zfill(text_elements.get('framecounter').get('padding'))))
+					log.debug("\t-- processing dynamic text")
 					buf = self.generate_text('framecounter', text_elements.get('framecounter'), buf)
 
 
@@ -622,7 +619,7 @@ class GenerateDaily():
 
 
 		if resize:
-			log.info("Performing Resize: \n\t\t\tinput: {0}x{1} ar{2}\n\t\t\toutput: {3}x{4} ar{5}".format(iwidth, iheight, iar, self.output_width, self.output_height, oar))
+			log.debug("\t-- resizing \n\tfrom:\t %sx%s %02f\n\tto:\t\t %sx%s %02f" %(iwidth, iheight, iar, self.output_width, self.output_height, oar))
 
 			if iwidth != self.output_width:
 				# Perform resize, no change in AR
@@ -723,7 +720,7 @@ class GenerateDaily():
 		"""
 
 		if self.outputOCIOTransform:
-			log.debug("Applying OCIO Config: \n\t{0}\n\t{1} -> {2}".format(self.ocioconfig, self.outputOCIOTransform[0], self.outputOCIOTransform[1]))
+			log.debug("\t-- applying OCIO Config: %s \n\t%s  -> %s" % (self.outputOCIOProfile, self.outputOCIOTransform[0], self.outputOCIOTransform[1]))
 			success = oiio.ImageBufAlgo.colorconvert(buf, buf, self.outputOCIOTransform[0], self.outputOCIOTransform[1], colorconfig=self.ocioconfig)
 			if not success:
 				log.error("Error: OCIO Color Convert failed. Please check that you have the specified colorspaces in your OCIO config.")
@@ -753,8 +750,14 @@ class GenerateDaily():
 			Returns the modified oiio.ImageBuf object with text added.
 		"""
 
+		font = "fonts/Helvetica/Helvetica.ttf"
+		font_size = .02
+		font_color =  [0.8, 0.8, 0.8, 1.0]
+		box = [0.4328125, 0.9481481481481482, 0.5796875, 0.9998842592592593]
+		justify = "center"
+
 		# Text Elements
-		log.debug("Processing text element: {0}".format(text_element_name))
+		log.debug("\t\t-- text element: %s" % (text_element_name))
 
 		# Inherit globals if an element in text_element is not defined
 		for key, value in text_element.items():
@@ -787,17 +790,16 @@ class GenerateDaily():
 		box_ur[1] = int(self.output_height - box_ur[1])
 
 		# Get text to display
-		text_contents = self.text.get(text_element_name)
+		text_contents = self.overlayTextDict.get(text_element_name)
+		print(text_contents)
 		text_prefix = text_element['prefix']
 		if text_prefix:
 			text_contents = text_prefix + text_contents
 
 		leading = self.profile_config.get('leading')
 
-
 		if text_contents:
-			log.debug("Text Output: \n\t\t\t\t{0}, {1}, {2}, {fontsize}, {textcolor}, {shadow}".format(box_ll[0], box_ll[1], text_contents, fontsize=font_size, fontname=font,
-				textcolor=(font_color[0], font_color[1], font_color[2], font_color[3]), shadow=0))
+			log.debug("\nContent: %s\nLower left: %s, %s\nFont name: %s\nFont size: %s" % (text_contents, box_ll[0], box_ll[1], font, font_size))
 
 			text_roi = oiio.ImageBufAlgo.text_size(text_contents, fontsize=font_size, fontname=font)
 
