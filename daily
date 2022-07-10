@@ -101,7 +101,7 @@ class GenerateDaily():
         # Get Config file data
         if os.path.isfile(DAILIES_CONFIG):
             with open(DAILIES_CONFIG, 'r') as configfile:
-                config = yaml.load(configfile)
+                config = yaml.full_load(configfile)
         else:
             print("Error: Could not find config file {0}".format(DAILIES_CONFIG))
             self.setup_success = False
