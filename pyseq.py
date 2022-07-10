@@ -752,9 +752,9 @@ class Sequence(list):
                     frange.append(str(start))
                 start = end = frame
                 continue
-            if start is '' or int(start) > frame:
+            if start == '' or int(start) > frame:
                 start = frame
-            if end is '' or int(end) < frame:
+            if end == '' or int(end) < frame:
                 end = frame
         if start == end:
             frange.append(str(start))
