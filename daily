@@ -17,7 +17,6 @@ import yaml
 from PIL import Image
 
 
-
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 DAILIES_CONFIG_DEFAULT = os.path.join(dir_path, "dailies-config.yaml")
@@ -27,7 +26,6 @@ DEFAULT_DAILIES_PROFILE = 'delivery'
 DEBUG = False
 
 log = logging.getLogger(__name__)
-
 
 class GenerateDaily():
 
@@ -58,95 +56,74 @@ class GenerateDaily():
 			self.setup_success = False
 			return
 
-		# Get list of possible options from config file
+		# Get dictionaries from config file
+		self.globals_config = config.get("globals")
 		output_codecs = config.get("output_codecs")
 		dailies_profiles = config.get("dailies_profiles")
 		ocio_profiles = config.get("ocio_profiles")
 
-		# format for argparse options help
-		codecString = '"%s"' % '", "'.join(output_codecs.keys())
-		dailiesString = '"%s"' % '", "'.join(dailies_profiles.keys())
-		ocioString = '"%s"' % '", "'.join(ocio_profiles.keys())
 
 		# Parse input arguments
 		parser = argparse.ArgumentParser(description='Process given image sequence with ocio display, resize and output to ffmpeg for encoding into a dailies movie.')
-		parser.add_argument("input_path", help="Input exr image sequence. Can be a folder containing images, a path to the first image, a percent 05d path, or a ##### path.")
+		parser.add_argument("inputPath", help="Input exr image sequence. Can be a folder containing images, a path to the first image, a percent 05d path, or a ##### path.")
+		codecString = '"%s"' % '", "'.join(output_codecs.keys())
 		parser.add_argument("-c", "--codec", help="Codec names defined in dailies-config.yaml: %s, default is \"%s\"" % (codecString, DEFAULT_CODEC))
+		dailiesString = '"%s"' % '", "'.join(dailies_profiles.keys())
 		parser.add_argument("-p", "--profile", help="Dailies overlay profiles defined in dailie-config.yaml: %s. Default is \"%s\"" % (dailiesString, DEFAULT_DAILIES_PROFILE))
 		parser.add_argument("-o", "--output", help="Output directory: Optional override to movie_location in the DAILIES_CONFIG. This can be a path relative to the image sequence.")
 		parser.add_argument("-t", '--text', help="Text elements and contents to add: e.g. \n\t\"artist: Jed Smith | comment: this is stupid man|")
+		ocioString = '"%s"' % '", "'.join(ocio_profiles.keys())
 		parser.add_argument("--ocio", help="OCIO color space presets defined in dailie-config.yaml: %s" % (ocioString))
 		parser.add_argument("-d", "--debug", help="Set debug to true.", action="store_true")
-
-		# Show help if no args.
-		if len(sys.argv)==1:
-			parser.print_help()
-			return None
-
 		args = parser.parse_args()
 
-		input_path = args.input_path
-		selectedCodec = args.codec
-		selectedDailiesProfile = args.profile
-		self.movie_location = args.output
-		texts = args.text
-		commandline_ocio_profile = args.ocio
-		if args.debug:
-			print("Setting DEBUG=True!")
-			DEBUG = True
+		#
+		inputPath = args.inputPath
+		if not inputPath:
+			inputPath = os.getcwd()
+		
+		#
+		self.outputMovieDir = args.output
 
+		#
+		outputCodec = args.codec
+		if not outputCodec:
+			config_default_codec = self.globals_config.get('output_codec')
+			if config_default_codec:
+				outputCodec = config_default_codec
+			else:
+				outputCodec = DEFAULT_CODEC
+		if outputCodec not in output_codecs:
+			print("Error: invalid codec specified. Possible options are: %s" % codecString)
+			self.setup_success = False
+			return
+		self.codec_config = config["output_codecs"][outputCodec]
+
+		#
+		outputDailiesProfile = args.profile
+		if not outputDailiesProfile:
+			outputDailiesProfile = DEFAULT_DAILIES_PROFILE
+		self.profile_config = config.get("dailies_profiles")[outputDailiesProfile]
+		self.profile_config['name'] = outputDailiesProfile
+
+		#
+		self.outputOCIOProfile = args.ocio
+		#
+		DEBUG = args.debug
+
+		#
+		texts = args.text
 		if texts:
 			texts = texts.split('|')
 		else:
 			texts = []
-
-		# Assemble text elements contents dict
+		#
 		self.text = {}
 		for text in texts:
 			key, value = text.split(':')
 			key = key.strip()
 			value = value.strip()
 			self.text[key] = value
-
-		# Use current directory if no input path specified
-		if not input_path:
-			input_path = os.getcwd()
-
-
-		# Get Config dicts for globals and the "codec" config from the config file
-		self.globals_config = config.get("globals")
-
-
-		# Use default output codec from config if none specified.
-		if not selectedCodec:
-			config_default_codec = self.globals_config.get('output_codec')
-			if config_default_codec:
-				selectedCodec = config_default_codec
-			else:
-				selectedCodec = DEFAULT_CODEC
-		if selectedCodec not in output_codecs:
-			print("Error: invalid codec specified. Possible options are: %s" % codecString)
-			self.setup_success = False
-			return
-
-		self.codec_config = config["output_codecs"][selectedCodec]
-
-		# Gather image sequences from input path
-		self.image_sequences = self.get_image_sequences(input_path)
-		if not self.image_sequences:
-			print("No image sequence found! Exiting...")
-			self.setup_success = False
-			return
-
-
-		# Get dailies profile config
-		if not selectedDailiesProfile:
-			selectedDailiesProfile = DEFAULT_DAILIES_PROFILE
-
-		self.profile_config = config.get("dailies_profiles")[selectedDailiesProfile]
-		print("\n\n", self.profile_config)
-
-		# Add datetime
 		if self.profile_config.get('text_elements'):
 			datetime_format_string = self.profile_config.get('text_elements').get('datetime').get('datetime_format')
 		else:
@@ -157,24 +134,23 @@ class GenerateDaily():
 			self.text['datetime'] = datetime.datetime.now().replace(microsecond=0).isoformat()
 
 
-		#############################################################################################################
-		# Validate config information.  Directly modifies the self.globals_config and self.codec_config vars
-		#############################################################################################################
+		# Gather image sequences from input path
+		self.image_sequences = self.get_image_sequences(inputPath)
+		if not self.image_sequences:
+			print("No image sequence found! Exiting...")
+			self.setup_success = False
+			return
 
 
-		#####################################
+		# -----------------------------------
 		# Set up OCIO color transform
 		# -----------------------------------
 
-		# Get OCIO config and verify it exists
+		# Get OCIO config file from dailies-config.yaml or from ENV
 		self.ocioconfig = self.globals_config.get('ocioconfig')
-		if self.ocioconfig:
-			log.debug("Got OCIO config from dailies-config: {0}".format(self.ocioconfig))
-		# Try to get ocio config from $OCIO env-var if it's not defined
 		if not self.ocioconfig:
 			env_ocio = os.getenv("OCIO")
 			if env_ocio:
-				self.globals_config['ocioconfig'] = env_ocio
 				self.ocioconfig = env_ocio
 
 		if not os.path.exists(self.ocioconfig):
@@ -185,20 +161,22 @@ class GenerateDaily():
 		# Get default ocio transform to use if none is passed by commandline
 		ocio_default_transform = self.globals_config.get("ocio_default_transform")
 
-		# Set self.ociocolorconvert: the colorspace transformation to use in processing
-		if commandline_ocio_profile:
+		# Set self.outputOCIOTransform: the colorspace transformation to use in processing
+		if self.outputOCIOProfile:
 			# Check if specified ocio profile exists in the config
-			if commandline_ocio_profile in ocio_profiles.keys():
-				self.ociocolorconvert = ocio_profiles.get(commandline_ocio_profile).get('ociocolorconvert')
+			if self.outputOCIOProfile in ocio_profiles.keys():
+				self.outputOCIOTransform = ocio_profiles.get(self.outputOCIOProfile).get('ociocolorconvert')
 			else:
-				print("Error: OCIO color transform {0} does not exist in config. Falling back to default {1}".format(commandline_ocio_profile, ocio_default_transform))
-				self.ociocolorconvert = ocio_profiles.get(ocio_default_transform).get('ociocolorconvert')
+				print("Error: OCIO color transform %s does not exist in config. Falling back to default %s" % (self.outputOCIOProfile, ocio_default_transform))
+				self.outputOCIOTransform = ocio_profiles.get(ocio_default_transform).get('ociocolorconvert')
+				self.outputOCIOProfile = ocio_default_transform
 		elif ocio_default_transform:
-			self.ociocolorconvert = ocio_profiles.get(ocio_default_transform).get('ociocolorconvert')
+			self.outputOCIOProfile = ocio_default_transform
+			self.outputOCIOTransform = ocio_profiles.get(ocio_default_transform).get('ociocolorconvert')
 		else:
 			# No ocio color transform specified
 			print("Warning: No default ocio transform specified, and no transform specified on the commandline. No color transform will occur.")
-			self.ociocolorconvert = None
+			self.outputOCIOTransform = None
 
 		# Only colorconvert is implemented for now
 		# self.ociolook = self.globals_config.get('ociolook')
@@ -239,6 +217,8 @@ class GenerateDaily():
 
 
 
+
+
 	def process(self):
 		"""
 		Performs the actual processing of the movie.
@@ -259,7 +239,6 @@ class GenerateDaily():
 
 		movie_ext = self.globals_config['movie_ext']
 
-
 		# Create full movie filename
 		# Append codec to dailies movie name if requested
 		if self.globals_config['movie_append_codec']:
@@ -278,33 +257,42 @@ class GenerateDaily():
 
 		# Handle relative / absolute paths for movie location
 		# use globals config for movie location if none specified on the commandline
-		if not self.movie_location:
-			self.movie_location = self.globals_config['movie_location']
-			print("No output folder specified. Using Output folder from globals: {0}".format(self.movie_location))
+		if not self.outputMovieDir:
+			self.outputMovieDir = self.globals_config['movie_location']
 
-		if self.movie_location.startswith('/'):
+		if self.outputMovieDir.startswith('/'):
 			# Absolute path specified
-			self.movie_fullpath = os.path.join(self.movie_location, movie_filename)
-		elif self.movie_location.startswith("~"):
+			self.outputMovieFile = os.path.join(self.outputMovieDir, movie_filename)
+		elif self.outputMovieDir.startswith("~"):
 			# Path referencing home folder specified
-			self.movie_location = os.path.expanduser(self.movie_location)
-			self.movie_fullpath = os.path.join(self.movie_location, movie_filename)
-		elif self.movie_location.startswith(".") or self.movie_location.startswith(".."):
+			self.outputMovieDir = os.path.expanduser(self.outputMovieDir)
+			self.outputMovieFile = os.path.join(self.outputMovieDir, movie_filename)
+		elif self.outputMovieDir.startswith(".") or self.outputMovieDir.startswith(".."):
 			# Relative path specified - will output relative to image sequence directory
-			self.movie_fullpath = os.path.join(self.image_sequence.dirname, self.movie_location, movie_filename)
+			self.outputMovieFile = os.path.join(self.image_sequence.dirname, self.outputMovieDir, movie_filename)
 		else:
-			self.movie_fullpath = os.path.join(self.movie_location, movie_filename)
+			self.outputMovieFile = os.path.join(self.outputMovieDir, movie_filename)
 
 		# Check output dir exists
-		if not os.path.exists(os.path.dirname(self.movie_fullpath)):
+		if not os.path.exists(os.path.dirname(self.outputMovieFile)):
 			try:
-				os.makedirs(os.path.dirname(self.movie_fullpath))
+				os.makedirs(os.path.dirname(self.outputMovieFile))
 			except OSError:
-				print("Output directory does not exist and do not have permission to create it: \n\t{0}".format(os.path.dirname(self.movie_fullpath)))
+				print("Output directory does not exist and do not have permission to create it: \n\t{0}".format(os.path.dirname(self.outputMovieFile)))
 				return
+#seq.format('%h%R%t')
+		print("Input sequence: \t%s" % self.image_sequence.path())
+		print("Dailies profile: \t%s" % self.profile_config['name'])
+		print("Codec config: \t\t%s" % self.codec_config['name'])
+		print("OCIO profile: \t\t%s" % self.outputOCIOProfile)
+		print("OCIO transform: \t%s" % self.outputOCIOTransform)
+		print("Output width: \t\t%s" % self.output_width)
+		print("Output height: \t\t%s" % self.output_height)
+		print("Output movie: \t\t%s" % self.outputMovieFile)
+		print("")
 
 		# Set up Logger
-		log_fullpath = os.path.splitext(self.movie_fullpath)[0] + ".log"
+		log_fullpath = os.path.splitext(self.outputMovieFile)[0] + ".log"
 		if os.path.exists(log_fullpath):
 			os.remove(log_fullpath)
 		handler = logging.FileHandler(log_fullpath)
@@ -316,10 +304,13 @@ class GenerateDaily():
 			log.setLevel(logging.DEBUG)
 		else:
 			log.setLevel(logging.INFO)
-		log.debug("Got config:\n\tCodec Config:\t{0}\n\tImage Sequence Path:\n\t\t{1}".format(
-			self.codec_config['name'], self.image_sequence.path()))
-
-		log.debug("Output width x height: {0}x{1}".format(self.output_width, self.output_height))
+		log.debug("Input sequence: %s" % self.image_sequence.path())
+		log.debug("Dailies profile: %s" % self.profile_config['name'])
+		log.debug("Codec config: %s" % self.codec_config['name'])
+		log.debug("OCIO transform: %s" % self.outputOCIOTransform)
+		log.debug("Output width: %s" % self.output_width)
+		log.debug("Output height: %s" % self.output_height)
+		log.debug("Output movie: %s" % self.outputMovieFile)
 
 		# Set pixel_data_type based on config bitdepth
 		if self.codec_config['bitdepth'] > 8:
@@ -329,14 +320,15 @@ class GenerateDaily():
 
 
 		# Get timecode based on frame
-		tc = Timecode(self.globals_config['framerate'], start_timecode='00:00:00:00')
+		tc = Timecode(self.globals_config['framerate'], start_timecode='00:01:00:00')
 		self.start_tc = tc + self.image_sequence.start()
 
 		# Set up ffmpeg command
 		ffmpeg_args = self.setup_ffmpeg()
 
-		log.info("ffmpeg command:\n\t{0}".format(ffmpeg_args))
-
+		log.info("\n%s\n\n" % (ffmpeg_args))
+		
+		print("Running command:\n%s\n"% ffmpeg_args)
 
 		# Static image buffer for text that doesn't change frame to frame
 		self.static_text_buf = oiio.ImageBuf(oiio.ImageSpec(self.output_width, self.output_height, 4, self.pixel_data_type))
@@ -383,7 +375,7 @@ class GenerateDaily():
 				else:
 					ffproc.stdin.write(pixels)
 			else:
-				buf.write(os.path.splitext(self.movie_fullpath)[0] + ".{0:05d}.jpg".format(self.frame.frame))
+				buf.write(os.path.splitext(self.outputMovieFile)[0] + ".{0:05d}.jpg".format(self.frame.frame))
 
 			frame_elapsed_time = datetime.timedelta(seconds=time.time() - frame_start_time)
 			log.info("Frame Processing Time: \t{0}".format(frame_elapsed_time))
@@ -408,7 +400,7 @@ class GenerateDaily():
 		"""
 		input_path = os.path.realpath(input_path)
 		input_image_formats = self.globals_config.get('input_image_formats')
-		print('Processing INPUT PATH: {0}'.format(input_path))
+		print('Input path:')
 		if os.path.isdir(input_path):
 			# Find image sequences recursively inside specified directory
 			image_sequences = []
@@ -448,7 +440,10 @@ class GenerateDaily():
 				extension = image_sequence.name.split('.')[-1]
 				if extension in input_image_formats:
 					actual_image_sequences.append(image_sequence)
-			print("Found image sequences: \n{0}".format(image_sequences))
+			print("Found image sequence%s:" % ('s' if len(actual_image_sequences) > 1 else ""))
+			for seq in actual_image_sequences:
+				print("\t%s/%s" % (input_path, seq.format('%h%R%t')))
+			print("")
 			return actual_image_sequences
 		else:
 			log.error("Could not find any Image Sequences!!!")
@@ -526,7 +521,7 @@ class GenerateDaily():
 			args += " -b:v {0}".format(self.codec_config['bitrate'])
 
 		# Finally add the output movie file path
-		args += " {0}".format(self.movie_fullpath)
+		args += " {0}".format(self.outputMovieFile)
 
 		return args
 
@@ -570,7 +565,7 @@ class GenerateDaily():
 		oiio.ImageBufAlgo.channels(buf, buf, (0,1,2))
 
 		# Apply ocio color transform
-		# buf = self.apply_ocio_transform(buf)
+		buf = self.apply_ocio_transform(buf)
 
 		# Setup for width and height
 		if not self.output_width:
@@ -658,8 +653,6 @@ class GenerateDaily():
 					buf = oiio.ImageBufAlgo.crop(buf, roi=oiio.ROI(0, self.output_width, 0, self.output_height))
 					buf = self.oiio_transform(buf, 0, height_diff/2)
 
-
-
 		# Apply Cropmask if enabled
 		cropmask_config = self.profile_config.get('cropmask')
 		if cropmask_config:
@@ -686,7 +679,6 @@ class GenerateDaily():
 				oiio.ImageBufAlgo.fill(cropmask_buf, (0, 0, 0, 0), oiio.ROI(0, self.output_width, cropmask_bar, self.output_height - cropmask_bar))
 
 				# Merge cropmask and text over image
-				print("merging overlays")
 				oiio.ImageBufAlgo.channels(buf, buf, (0, 1, 2, 1.0))
 				buf = oiio.ImageBufAlgo.over(cropmask_buf, buf)
 				buf = oiio.ImageBufAlgo.over(self.static_text_buf, buf)
@@ -721,7 +713,7 @@ class GenerateDaily():
 		Applies an ocio transform specified in the config. Can be a ociodisplay, colorconvert, or look transform
 		For now only colorconvert is supported.
 		Reads from self.ocioconfig to specify the ocio config to use.
-		Reads from self.ociocolorconvert, a two item list. [0] is src, [1] is dst colorspace.
+		Reads from self.outputOCIOTransform, a two item list. [0] is src, [1] is dst colorspace.
 
 		Args:
 			buf: oiio.ImageBuf object representing the image to be transformed.
@@ -730,9 +722,9 @@ class GenerateDaily():
 			Returns the modified oiio.ImageBuf object which holds the altered image data.
 		"""
 
-		if self.ociocolorconvert:
-			log.debug("Applying OCIO Config: \n\t{0}\n\t{1} -> {2}".format(self.ocioconfig, self.ociocolorconvert[0], self.ociocolorconvert[1]))
-			success = oiio.ImageBufAlgo.colorconvert(buf, buf, self.ociocolorconvert[0], self.ociocolorconvert[1], colorconfig=self.ocioconfig)
+		if self.outputOCIOTransform:
+			log.debug("Applying OCIO Config: \n\t{0}\n\t{1} -> {2}".format(self.ocioconfig, self.outputOCIOTransform[0], self.outputOCIOTransform[1]))
+			success = oiio.ImageBufAlgo.colorconvert(buf, buf, self.outputOCIOTransform[0], self.outputOCIOTransform[1], colorconfig=self.ocioconfig)
 			if not success:
 				log.error("Error: OCIO Color Convert failed. Please check that you have the specified colorspaces in your OCIO config.")
 
