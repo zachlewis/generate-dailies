@@ -1,6 +1,8 @@
 globals:
   # Path to the ocio config to use
-  ocioconfig: /af/show/oa/assets/lut/ocio_config/publish/main/lut/v012/bundle/config.ocio
+  ocioconfig: /Users/thomas/Downloads/OpenColorIO-Configs-master/aces_1.2/config.ocio
+
+# /af/show/oa/assets/lut/ocio_config/publish/main/lut/v012/bundle/config.ocio
   # Default ocio profile to use if not specified on the commandline
   ocio_default_transform: grade
 
@@ -37,10 +39,11 @@ globals:
   #     { "keys",            1,   4,    false,    true,     true },
   #     { "simon",           1,   4,    false,    true,     true },
   #     { "rifman",          1,   4,    false,    true,     true }
-  filter:
+  filter: box
 
   # Output framerate. film=24, hdtv=23.98 = 24000/1001, pal=25, ntsc=30000/1001
-  framerate: 24
+  #framerate: 30000/1001
+  framerate: 30
 
   # specify a default video filter string to use in ffmpeg.
   # https://trac.ffmpeg.org/wiki/Scaling
@@ -69,6 +72,12 @@ ocio_profiles:
     ociocolorconvert: ["linear", "client_grade"]
   show_log:
     ociocolorconvert: ["linear", "REDLog3G10"]
+  acescg2srgb:
+    ociocolorconvert: ["ACES - ACEScg", "Output - sRGB"]
+  logc2srgb:
+    ociocolorconvert: ["Input - ARRI - V3 LogC (EI800) - Wide Gamut", "Output - sRGB"]
+  logc2acescg:
+    ociocolorconvert: ["Input - ARRI - V3 LogC (EI800) - Wide Gamut", "ACES - ACEScg"]
 
 ###############################################
 ## Dailies Overlay Profiles
@@ -95,7 +104,7 @@ dailies_profiles:
     # For example to do a hard crop to 2.35 set the cropmask-ar to 2.35 and the crop mask opacity to 1.0
     cropmask:
       enable: true
-      aspect: 1.85
+      aspect: 2.39
       opacity: 0.5
 
     text_elements:
@@ -111,8 +120,7 @@ dailies_profiles:
         # https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior
         # Specify the datetime format. For example "%Y-%m-%dT%H:%M:%S" is ISO 8601 standard date format
         # This would be Mon July 7 2017 23h13: "%a %b %d %Y %Hh%M"
-        datetime_format: "%Y-%m-%d - %Hh%M"
-
+        datetime_format: "%Y-%m-%d"
 
       artist:
         enable: true
@@ -123,7 +131,6 @@ dailies_profiles:
         box: [0.4328125, 0.9481481481481482, 0.5796875, 0.9998842592592593]
         font_color: [0.8, 0.8, 0.8, 1.0]
         justify: center
-
 
       comment:
         enable: true
@@ -241,6 +248,31 @@ output_codecs:
     metadata_s:
     bitrate:
     movie_ext: mov
+
+  avcth:
+    name: avcth
+    overlay: internal_daily
+    cropwidth:
+    cropheight:
+    width:
+    height:
+    fit:
+    framerate:
+    codec: libx264
+    profile: high
+    qscale:
+    preset: faster
+    keyint: 1
+    bframes: 0
+    tune: film
+    crf: 22
+    pix_fmt: yuv420p
+    vf: colormatrix=bt601:bt709
+    bitdepth: 8
+    vendor:
+    metadata_s:
+    bitrate:
+    movie_ext: mp4
 
 
   ##############################################################
