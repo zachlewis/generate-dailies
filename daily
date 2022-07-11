@@ -191,6 +191,7 @@ class GenerateDaily():
 		if not self.output_width or not self.output_height:
 			buf = oiio.ImageBuf(self.image_sequence[0].path)
 			spec = buf.spec()
+			print(spec)
 			iar = float(spec.width) / float(spec.height)
 			if not self.output_width:
 				self.output_width = spec.width
@@ -327,6 +328,7 @@ class GenerateDaily():
 		# Static image buffer for text that doesn't change frame to frame
 		self.static_text_buf = oiio.ImageBuf(oiio.ImageSpec(self.output_width, self.output_height, 4, self.pixel_data_type))
 
+
 		# Loop through each text element, create the text image, and add it to self.static_text_buf
 		log.debug("\t-- processing static text")
 		text_elements = self.profile_config.get('text_elements')
@@ -343,6 +345,12 @@ class GenerateDaily():
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE
 				)
+
+		self.slate = oiio.ImageBuf(oiio.ImageSpec(self.output_width, self.output_height, 3, self.pixel_data_type))
+		oiio.ImageBufAlgo.fill(self.slate, (1,0,0), (0,0,0), oiio.ROI.All)
+		pixels = self.slate.get_pixels(self.pixel_data_type)
+		ffproc.stdin.write(pixels)
+
 
 		# Loop through every frame, passing the result to the ffmpeg subprocess
 		for i, self.frame in enumerate(self.image_sequence, 1):
