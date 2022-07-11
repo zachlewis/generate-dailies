@@ -754,7 +754,6 @@ class GenerateDaily():
 		font_size = .02
 		font_color =  [0.8, 0.8, 0.8, 1.0]
 		box = [0.4328125, 0.9481481481481482, 0.5796875, 0.9998842592592593]
-		justify = "center"
 
 		# Text Elements
 		log.debug("\t\t-- text element: %s" % (text_element_name))
@@ -774,20 +773,13 @@ class GenerateDaily():
 		# Calculate font size and position
 		font_size = text_element['font_size']
 		font_color = text_element['font_color']
-		box = text_element['box']
-		justify = text_element['justify']
-		if justify != "left" or justify != "center":
-			justify = "left"
+		anchor = text_element['anchor']
+		hjustify = text_element['hjustify']
+		vjustify = text_element['vjustify']
 
 
 		# Scale back to pixels from %
-		box_ll = [int(box[0] * self.output_width), int(box[1] * self.output_height)]
-		box_ur = [int(box[2] * self.output_width), int(box[3] * self.output_height)]
 		font_size = int(font_size * self.output_width)
-
-		# Convert from Nuke-style (reference = lower left) to OIIO Style (reference = upper left)
-		box_ll[1] = int(self.output_height - box_ll[1])
-		box_ur[1] = int(self.output_height - box_ur[1])
 
 		# Get text to display
 		text_contents = self.overlayTextDict.get(text_element_name)
@@ -799,46 +791,18 @@ class GenerateDaily():
 		leading = self.profile_config.get('leading')
 
 		if text_contents:
-			log.debug("\nContent: %s\nLower left: %s, %s\nFont name: %s\nFont size: %s" % (text_contents, box_ll[0], box_ll[1], font, font_size))
+			log.debug("\nContent: %s\nAnchor: %s, %s\nFont name: %s\nFont size: %s" % (text_contents, anchor[0], anchor[1], font, font_size))
 
-			text_roi = oiio.ImageBufAlgo.text_size(text_contents, fontsize=font_size, fontname=font)
-
-			# Add text height to position
-			box_ll[1] = int(box_ll[1] + text_roi.height)
-			box_width = box_ur[0] - box_ll[0]
-
-			# Wrap text into lines that are not longer than box width
-			if text_roi.width > box_width:
-				words = text_contents.split()
-				# Gather a list of lines that fit in the box
-				lines = []
-				line = []
-				for i, word in enumerate(words):
-					line.append(word)
-					# Get length of line with next word
-					str_line = " ".join(line)
-					if i < len(words)-1:
-						text_width = oiio.ImageBufAlgo.text_size(str_line + " " + words[i+1], fontsize=font_size, fontname=font).width
-					else:
-						text_width = oiio.ImageBufAlgo.text_size(str_line, fontsize=font_size, fontname=font).width
-					if text_width > box_width:
-						lines.append(str_line)
-						line = []
-					if i == len(words)-1:
-						lines.append(str_line)
-			else:
-				lines = [text_contents]
-
+			lines = [text_contents]
 			lines.reverse()
+
 			for line in lines:
 				oiio.ImageBufAlgo.render_text(
-					buf, box_ll[0], box_ll[1], line, fontsize=font_size, fontname=font,
+					buf, int(anchor[0]*self.output_width), int(anchor[1]*self.output_height), line, fontsize=font_size, fontname=font,
 					textcolor=(font_color[0], font_color[1], font_color[2], font_color[3]),
-					alignx=justify, aligny="bottom", shadow=0,
+					alignx=hjustify, aligny=vjustify, shadow=0,
 					roi=oiio.ROI.All, nthreads=0
 					)
-				# Offset up by line height + leading amount
-				box_ll[1] = int(box_ll[1] - font_size - font_size * leading)
 		else:
 			log.warning("Warning: No text specified for text element {0}".format(text_element_name))
 		return buf
@@ -851,5 +815,4 @@ class GenerateDaily():
 
 if __name__=="__main__":
 	daily = GenerateDaily()
-	# if daily.setup_success:
-	#	 daily.process()
+
