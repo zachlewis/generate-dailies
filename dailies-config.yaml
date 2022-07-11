@@ -112,67 +112,64 @@ dailies_profiles:
         enable: true
         prefix:
         font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.025
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.8427083333333333, 0.9481481481481482, 0.9975179036458334, 0.996875]
+        font_size: 0.015
         font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: left
-        # https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior
-        # Specify the datetime format. For example "%Y-%m-%dT%H:%M:%S" is ISO 8601 standard date format
-        # This would be Mon July 7 2017 23h13: "%a %b %d %Y %Hh%M"
         datetime_format: "%Y-%m-%d"
+        anchor: [.98, .02]
+        hjustify: right
+        vjustify: top
 
       artist:
         enable: true
         prefix:
         font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.025
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.4328125, 0.9481481481481482, 0.5796875, 0.9998842592592593]
+        font_size: 0.015
         font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: center
+        anchor: [.5, .02]
+        hjustify: center
+        vjustify: top
+
+      sequence:
+        enable: true
+        prefix:
+        font: fonts/Helvetica/Helvetica.ttf
+        font_size: 0.015
+        font_color: [0.8, 0.8, 0.8, 1.0]
+        anchor: [.02, .02]
+        hjustify: left
+        vjustify: top
 
       comment:
         enable: true
         prefix:
         font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.025
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.018229166666666668, 0.018518518518518517, 0.49270833333333336, 0.14166666666666666]
+        font_size: 0.015
         font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: left
+        anchor: [.02, .98]
+        hjustify: left
+        vjustify: bottom
 
 
       framecounter:
         enable: true
         prefix:
         font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.025
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.9375, 0.016666666666666666, 0.9890299479166667, 0.08333333333333333]
+        font_size: 0.015
         font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: left
         padding: 5
-
-      sequence:
-        enable: true
-        prefix:
-        font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.025
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.020833333333333332, 0.9481481481481482, 0.24719645182291666, 0.987037037037037]
-        font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: left
+        anchor: [.98, .98]
+        hjustify: right
+        vjustify: bottom
 
       discipline:
         enable: true
         prefix:
         font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.025
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.020833333333333332, 0.9481481481481482, 0.14719645182291666, 0.987037037037037]
+        font_size: 0.015
         font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: left
+        anchor: [.01, .01]
+        hjustify: center
+        vjustify: center
 
 
   # Delivery profile - minimal overlays with cropmask and slate.
