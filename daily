@@ -7,7 +7,7 @@ import logging
 import argparse, shlex
 import subprocess
 
-from tc import Timecode
+from timecode import Timecode
 import pyseq
 
 
