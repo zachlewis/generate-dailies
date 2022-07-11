@@ -19,8 +19,8 @@ for encoding into a dailies movie.
 
 positional arguments:
   inputPath             Input exr image sequence. Can be a folder containing
-                        images, a path to the first image, a percent 05d path,
-                        or a ##### path.
+                        images, a path to the first image, a percent 05d
+                        path, or a ##### path.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -28,8 +28,8 @@ optional arguments:
                         Codec names defined in dailies-config.yaml: "avchq",
                         "avclq", "avc_lq", "avcth", "hevc_hq", "hevc_lq",
                         "hevc", "prores_4444", "prores_422hq", "prores_422",
-                        "dnxhd_36", "dnxhd_175", "dnxhr_hqx", "mjpeg", default
-                        is "avchq"
+                        "dnxhd_36", "dnxhd_175", "dnxhr_hqx", "mjpeg",
+                        default is "avchq"
   -p PROFILE, --profile PROFILE
                         Dailies overlay profiles defined in dailie-
                         config.yaml: "internal", "delivery". Default is
@@ -39,11 +39,12 @@ optional arguments:
                         in the DAILIES_CONFIG. This can be a path relative to
                         the image sequence.
   -ot OVERLAYTEXT, --overlayText OVERLAYTEXT
-                        Text elements and contents to add: e.g. "artist: Jed
-                        Smith | comment: this is stupid man|
+                        Text elements and contents overlay on frames: e.g.
+                        "artist= Jed Smith : comment= this is stupid man:
+                        framecounter : sequence
   -st SLATETEXT, --slateText SLATETEXT
-                        Text elements and contents to add: e.g. "artist: Jed
-                        Smith | comment: this is stupid man|
+                        Text elements and contents for slate: e.g.
+                        "artist=Jed Smith : comment= this is stupid man
   --ocio OCIO           OCIO color space presets defined in dailie-
                         config.yaml: "grade", "show_log", "acescg2srgb",
                         "logc2srgb", "logc2acescg"
@@ -67,6 +68,10 @@ optional arguments:
 - [PyYAML](https://pyyaml.org/wiki/PyYAML) to read config files - pip install PyYAML
 - [timecode](https://pypi.org/project/timecode/) to manage timecode and frames - pip install timecode
 - [pyseq](https://pypi.org/project/pyseq/) to parse image sequences - pip install pyseq
+
+## Logic
+- Dailies profiles defined in the config file specify how to handle the image
+- The text-elements items in the profile define the expected text overlay and their layout
 
 
 # The MIT License
