@@ -1,8 +1,7 @@
 globals:
   # Path to the ocio config to use
-  ocioconfig: /Users/thomas/Downloads/OpenColorIO-Configs-master/aces_1.2/config.ocio
+  ocioconfig: /Library/OCIO/OpenColorIO-Configs-master/aces_1.2/config.ocio
 
-# /af/show/oa/assets/lut/ocio_config/publish/main/lut/v012/bundle/config.ocio
   # Default ocio profile to use if not specified on the commandline
   ocio_default_transform: grade
 
