@@ -333,7 +333,6 @@ class GenerateDaily():
 		if text_elements:
 			for text_element_name, text_element in text_elements.items():
 				if text_element_name != 'framecounter':
-					print("generating static overlay frame with %s\n\t%s\n" % (text_element_name, text_element))
 					self.generate_text(text_element_name, text_element, self.static_text_buf)
 
 
@@ -783,7 +782,6 @@ class GenerateDaily():
 
 		# Get text to display
 		text_contents = self.overlayTextDict.get(text_element_name)
-		print(text_contents)
 		text_prefix = text_element['prefix']
 		if text_prefix:
 			text_contents = text_prefix + text_contents
