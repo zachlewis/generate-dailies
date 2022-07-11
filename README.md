@@ -62,8 +62,9 @@ Daily reads configuration data from a yaml file, and has the ability to create m
 - [ffmpeg](https://ffmpeg.org) - Used for encoding from OpenImageIO to quicktime.
 - [Pillow](https://pillow.readthedocs.io/en/stable/) - Optional Python module used for photo jpeg output. Jpegs are encoded using OpenimageIO -> Pillow -> ffmpeg.
 - [Numpy](https://www.numpy.org) - Python module used for OpenImageIO pixel data manipulations.
-- [PyYAML](https://pyyaml.org/wiki/PyYAML) - Used to read the yaml configuration file.
-
+- [PyYAML](https://pyyaml.org/wiki/PyYAML) to read config files - pip install PyYAML
+- [timecode](https://pypi.org/project/timecode/) to manage timecode and frames - pip install timecode
+- [pyseq](https://pypi.org/project/pyseq/) to parse image sequences - pip install pyseq
 
 
 # The MIT License
