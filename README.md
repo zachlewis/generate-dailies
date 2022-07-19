@@ -69,6 +69,9 @@ optional arguments:
 - [timecode](https://pypi.org/project/timecode/) to manage timecode and frames - pip install timecode
 - [pyseq](https://pypi.org/project/pyseq/) to parse image sequences - pip install pyseq
 
+Install on Debian was a bit of a pain. The python3-openimageio apt package is only available in Debian bullseye, and also only works with python3.9 which is not the default. I installed the above modules as follows:
+- python3.9 -m pip install timecode pyseq
+
 ## Logic
 - Dailies profiles defined in the config file specify how to handle the image
 - The text-elements items in the profile define the expected text overlay and their layout
