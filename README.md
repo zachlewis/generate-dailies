@@ -10,42 +10,45 @@ Daily reads configuration data from a yaml file, and has the ability to create m
 ## Commandline Options
 
 ```
-	usage: daily [-h] [-c CODEC] [-p PROFILE] [-o OUTPUT] [-t TEXT]
-				[-ct COLOR_TRANSFORM] [--ocio OCIO] [-d]
-				input_path
+usage: daily [-h] [-c CODEC] [-p PROFILE] [-o OUTPUT] [-ot OVERLAYTEXT]
+             [-st SLATETEXT] [--ocio OCIO] [-d]
+             inputPath
 
-	Process given image sequence with ocio display, resize and output to ffmpeg
-	for encoding into a dailies movie.
+Process given image sequence with ocio display, resize and output to ffmpeg
+for encoding into a dailies movie.
 
-	positional arguments:
-	input_path            Input exr image sequence. Can be a folder containing
-							images, a path to the first image, a percent 05d path,
-							or a ##### path.
+positional arguments:
+  inputPath             Input exr image sequence. Can be a folder containing
+                        images, a path to the first image, a percent 05d
+                        path, or a ##### path.
 
-	optional arguments:
-	-h, --help            show this help message and exit
-	-c CODEC, --codec CODEC
-							Codec name: Possible options are defined in the
-							DAILIES_CONFIG: avc_1440p avc_lq avchq avclq dnxhd_175
-							dnxhd_36 dnxhr_hqx hevc hevc_1440p mjpeg prores_422
-							prores_422hq prores_4444
-	-p PROFILE, --profile PROFILE
-							Dailies profile: Choose the settings to use for
-							dailies overlays: delivery internal
-	-o OUTPUT, --output OUTPUT
-							Output directory: Optional override to movie_location
-							in the DAILIES_CONFIG. This can be a path relative to
-							the image sequence.
-	-t TEXT, --text TEXT  Text elements and contents to add: e.g. "artist: Jed
-							Smith | comment: this is stupid man|
-	-ct COLOR_TRANSFORM, --color_transform COLOR_TRANSFORM
-							OCIO Colorspace Conversion preset to use. Specified in
-							the dailies config under ocio_profiles. show_log
-							tgm_log abr_log otp_log grade oa_log lima_log
-	--ocio OCIO           OCIO Colorspace Conversion to use. Specified in the
-							dailies config under ocio_profiles. show_log tgm_log
-							abr_log otp_log grade oa_log lima_log
-	-d, --debug           Set debug to true.
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CODEC, --codec CODEC
+                        Codec names defined in dailies-config.yaml: "avchq",
+                        "avclq", "avc_lq", "avcth", "hevc_hq", "hevc_lq",
+                        "hevc", "prores_4444", "prores_422hq", "prores_422",
+                        "dnxhd_36", "dnxhd_175", "dnxhr_hqx", "mjpeg",
+                        default is "avchq"
+  -p PROFILE, --profile PROFILE
+                        Dailies overlay profiles defined in dailie-
+                        config.yaml: "internal", "delivery". Default is
+                        "delivery"
+  -o OUTPUT, --output OUTPUT
+                        Output directory: Optional override to movie_location
+                        in the DAILIES_CONFIG. This can be a path relative to
+                        the image sequence.
+  -ot OVERLAYTEXT, --overlayText OVERLAYTEXT
+                        Text elements and contents overlay on frames: e.g.
+                        "artist= Jed Smith : comment= this is stupid man:
+                        framecounter : sequence
+  -st SLATETEXT, --slateText SLATETEXT
+                        Text elements and contents for slate: e.g.
+                        "artist=Jed Smith : comment= this is stupid man
+  --ocio OCIO           OCIO color space presets defined in dailie-
+                        config.yaml: "grade", "show_log", "acescg2srgb",
+                        "logc2srgb", "logc2acescg"
+  -d, --debug           Set debug to true.
 
 
 	# Example commands
@@ -62,8 +65,16 @@ Daily reads configuration data from a yaml file, and has the ability to create m
 - [ffmpeg](https://ffmpeg.org) - Used for encoding from OpenImageIO to quicktime.
 - [Pillow](https://pillow.readthedocs.io/en/stable/) - Optional Python module used for photo jpeg output. Jpegs are encoded using OpenimageIO -> Pillow -> ffmpeg.
 - [Numpy](https://www.numpy.org) - Python module used for OpenImageIO pixel data manipulations.
-- [PyYAML](https://pyyaml.org/wiki/PyYAML) - Used to read the yaml configuration file.
+- [PyYAML](https://pyyaml.org/wiki/PyYAML) to read config files - pip install PyYAML
+- [timecode](https://pypi.org/project/timecode/) to manage timecode and frames - pip install timecode
+- [pyseq](https://pypi.org/project/pyseq/) to parse image sequences - pip install pyseq
 
+Install on Debian was a bit of a pain. The python3-openimageio apt package is only available in Debian bullseye, and also only works with python3.9 which is not the default. I installed the above modules as follows:
+- python3.9 -m pip install timecode pyseq
+
+## Logic
+- Dailies profiles defined in the config file specify how to handle the image
+- The text-elements items in the profile define the expected text overlay and their layout
 
 
 # The MIT License

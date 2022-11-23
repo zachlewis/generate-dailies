@@ -1,6 +1,7 @@
 globals:
   # Path to the ocio config to use
-  ocioconfig: /af/show/oa/assets/lut/ocio_config/publish/main/lut/v012/bundle/config.ocio
+  ocioconfig: /Library/OCIO/OpenColorIO-Configs-master/aces_1.2/config.ocio
+
   # Default ocio profile to use if not specified on the commandline
   ocio_default_transform: grade
 
@@ -37,10 +38,11 @@ globals:
   #     { "keys",            1,   4,    false,    true,     true },
   #     { "simon",           1,   4,    false,    true,     true },
   #     { "rifman",          1,   4,    false,    true,     true }
-  filter:
+  filter: box
 
   # Output framerate. film=24, hdtv=23.98 = 24000/1001, pal=25, ntsc=30000/1001
-  framerate: 24
+  #framerate: 30000/1001
+  framerate: 30
 
   # specify a default video filter string to use in ffmpeg.
   # https://trac.ffmpeg.org/wiki/Scaling
@@ -69,6 +71,12 @@ ocio_profiles:
     ociocolorconvert: ["linear", "client_grade"]
   show_log:
     ociocolorconvert: ["linear", "REDLog3G10"]
+  acescg2srgb:
+    ociocolorconvert: ["ACES - ACEScg", "Output - sRGB"]
+  logc2srgb:
+    ociocolorconvert: ["Input - ARRI - V3 LogC (EI800) - Wide Gamut", "Output - sRGB"]
+  logc2acescg:
+    ociocolorconvert: ["Input - ARRI - V3 LogC (EI800) - Wide Gamut", "ACES - ACEScg"]
 
 ###############################################
 ## Dailies Overlay Profiles
@@ -95,67 +103,72 @@ dailies_profiles:
     # For example to do a hard crop to 2.35 set the cropmask-ar to 2.35 and the crop mask opacity to 1.0
     cropmask:
       enable: true
-      aspect: 1.85
-      opacity: 0.5
+      aspect: 2.39
+      opacity: 0.75
 
     text_elements:
-      datetime:
+      date:
         enable: true
         prefix:
         font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.0145833333333
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.8427083333333333, 0.9481481481481482, 0.9975179036458334, 0.996875]
+        font_size: 0.015
         font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: left
-        # https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior
-        # Specify the datetime format. For example "%Y-%m-%dT%H:%M:%S" is ISO 8601 standard date format
-        # This would be Mon July 7 2017 23h13: "%a %b %d %Y %Hh%M"
-        datetime_format: "%Y-%m-%d - %Hh%M"
-
+        datetime_format: "%Y-%m-%d"
+        anchor: [.98, .02]
+        hjustify: right
+        vjustify: top
 
       artist:
         enable: true
         prefix:
         font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.0145833333333
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.4328125, 0.9481481481481482, 0.5796875, 0.9998842592592593]
+        font_size: 0.015
         font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: center
+        anchor: [.5, .02]
+        hjustify: center
+        vjustify: top
 
+      sequence:
+        enable: true
+        prefix:
+        font: fonts/Helvetica/Helvetica.ttf
+        font_size: 0.015
+        font_color: [0.8, 0.8, 0.8, 1.0]
+        anchor: [.02, .02]
+        hjustify: left
+        vjustify: top
 
       comment:
         enable: true
         prefix:
         font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.0125
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.018229166666666668, 0.018518518518518517, 0.49270833333333336, 0.14166666666666666]
+        font_size: 0.015
         font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: left
+        anchor: [.02, .98]
+        hjustify: left
+        vjustify: bottom
 
 
       framecounter:
         enable: true
         prefix:
         font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.0145833333333
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.9375, 0.016666666666666666, 0.9890299479166667, 0.08333333333333333]
+        font_size: 0.015
         font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: left
         padding: 5
+        anchor: [.98, .98]
+        hjustify: right
+        vjustify: bottom
 
       discipline:
         enable: true
         prefix:
         font: fonts/Helvetica/Helvetica.ttf
-        font_size: 0.0145833333333
-        # Position a box: 2 x/y coordinates: [LL, UR]. 0,0 is Lower Left (Nuke-style)
-        box: [0.020833333333333332, 0.9481481481481482, 0.14719645182291666, 0.987037037037037]
+        font_size: 0.015
         font_color: [0.8, 0.8, 0.8, 1.0]
-        justify: left
+        anchor: [.01, .01]
+        hjustify: center
+        vjustify: center
 
 
   # Delivery profile - minimal overlays with cropmask and slate.
@@ -241,6 +254,31 @@ output_codecs:
     metadata_s:
     bitrate:
     movie_ext: mov
+
+  avcth:
+    name: avcth
+    overlay: internal_daily
+    cropwidth:
+    cropheight:
+    width:
+    height:
+    fit:
+    framerate:
+    codec: libx264
+    profile: high
+    qscale:
+    preset: faster
+    keyint: 1
+    bframes: 0
+    tune: film
+    crf: 22
+    pix_fmt: yuv420p
+    vf: colormatrix=bt601:bt709
+    bitdepth: 8
+    vendor:
+    metadata_s:
+    bitrate:
+    movie_ext: mp4
 
 
   ##############################################################
