@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
-import os, sys, re
+import os
 from glob import glob
 import time, datetime
 import logging
 import argparse, shlex
 import subprocess
+from pathlib import Path
 
 from timecode import Timecode
 import pyseq
-
 
 import OpenImageIO as oiio
 import numpy as np
@@ -17,9 +17,10 @@ import yaml
 from PIL import Image
 
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
+DAILIES_ROOT = Path(os.environ.get("REZ_DAILIES_ROOT",  Path(os.path.dirname(os.path.realpath(__file__))).parent))
+DAILIES_CONFIG_DEFAULT = DAILIES_ROOT/"config/dailies-config.yaml"
+DAILIES_DATA = DAILIES_ROOT/"data"
 
-DAILIES_CONFIG_DEFAULT = os.path.join(dir_path, "dailies-config.yaml")
 DEFAULT_CODEC = 'avchq'
 DEFAULT_DAILIES_PROFILE = 'delivery'
 
@@ -43,9 +44,7 @@ class GenerateDaily():
 
 
 		# Parse Config File
-		DAILIES_CONFIG = os.getenv("DAILIES_CONFIG")
-		if not DAILIES_CONFIG:
-			DAILIES_CONFIG = DAILIES_CONFIG_DEFAULT
+		DAILIES_CONFIG = str(os.environ.get('DAILIES_CONFIG', DAILIES_CONFIG_DEFAULT))
 
 		# Get Config file data
 		if os.path.isfile(DAILIES_CONFIG):
@@ -757,7 +756,7 @@ class GenerateDaily():
 			Returns the modified oiio.ImageBuf object with text added.
 		"""
 
-		font = "fonts/Helvetica/Helvetica.ttf"
+		font = str(DAILIES_DATA/"fonts/Helvetica/Helvetica.ttf")
 		font_size = .02
 		font_color =  [0.8, 0.8, 0.8, 1.0]
 		box = [0.4328125, 0.9481481481481482, 0.5796875, 0.9998842592592593]
@@ -814,11 +813,5 @@ class GenerateDaily():
 		return buf
 
 
-
-
-
-
-
 if __name__=="__main__":
 	daily = GenerateDaily()
-
