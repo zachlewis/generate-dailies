@@ -1,6 +1,6 @@
 globals:
   # Path to the ocio config to use
-  ocioconfig: /Library/OCIO/OpenColorIO-Configs-master/aces_1.2/config.ocio
+  ocioconfig: ocio://studio-config-v1.0.0_aces-v1.3_ocio-v2.1
 
   # Default ocio profile to use if not specified on the commandline
   ocio_default_transform: grade
@@ -66,13 +66,14 @@ globals:
 ###############################################
 
 ocio_profiles:
+  #TODO: tweak
   grade:
     # ocio colorspace conversion: [src_colorspace, dst_colorspace]
-    ociocolorconvert: ["linear", "client_grade"]
+    ociocolorconvert: ["scene_linear", "client_grade"]
   show_log:
-    ociocolorconvert: ["linear", "REDLog3G10"]
+    ociocolorconvert: ["scene_linear", "color_timing"]
   acescg2srgb:
-    ociocolorconvert: ["ACES - ACEScg", "Output - sRGB"]
+    ociocolorconvert: ["ACEScg", "Output - sRGB"]
   logc2srgb:
     ociocolorconvert: ["Input - ARRI - V3 LogC (EI800) - Wide Gamut", "Output - sRGB"]
   logc2acescg:
